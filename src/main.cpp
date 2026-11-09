@@ -10,10 +10,12 @@
 #include <iostream>
 #include <netinet/in.h>
 #include <print>
+#include <sstream>
 #include <string>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <vector>
 
 volatile sig_atomic_t is_running = 1;
 
@@ -163,8 +165,20 @@ void handle_quit_request(int client_fd) {
   is_running = false;
 }
 
+std::vector<std::string> split_string(const std::string &str) {
+  std::vector<std::string> out;
+  std::istringstream iss(str);
+  std::string line;
+
+  while (std::getline(iss, line)) {
+    out.push_back(std::move(line));
+  }
+
+  return out;
+}
+
 void get_response(int fd) {
-  char buf[1024];
+  char buf[4096];
 
   // NOTE: Loop till you get the exit line
   ssize_t n = recv(fd, buf, sizeof(buf), 0);
@@ -180,7 +194,11 @@ void get_response(int fd) {
     return;
   }
 
-  std::println("{}", std::string_view(buf, static_cast<size_t>(n)));
+  auto lines = split_string(std::string(buf, static_cast<size_t>(n)));
+
+  for (auto &line : lines) {
+    std::println("{}", line);
+  }
 }
 
 int handle_read_request(int fd) {
